@@ -1,0 +1,9 @@
+import { supabase } from './supabase-client.js';
+import { requireAdminSession, signOut } from './auth.js';
+const list=document.querySelector('#companies-list'), form=document.querySelector('#company-form'), msg=document.querySelector('#admin-message');
+const session=await requireAdminSession(); if(!session) throw new Error('unauthorized');
+document.querySelector('#logout').onclick=signOut;
+async function load(){const {data,error}=await supabase.from('companies').select('id,name,phone,active,created_at').order('created_at',{ascending:false}); if(error){list.textContent=error.message;return;} list.innerHTML=data.map(x=>`<div class="list-row"><strong>${escapeHtml(x.name)}</strong><span>${x.active?'Ativa':'Inativa'} · ${new Date(x.created_at).toLocaleDateString('pt-BR')}</span></div>`).join('')||'<p class="muted">Nenhuma empresa.</p>'; }
+form.addEventListener('submit',async e=>{e.preventDefault();msg.textContent='Criando...';const payload={companyName:document.querySelector('#company-name').value.trim(),ownerName:document.querySelector('#owner-name').value.trim(),ownerEmail:document.querySelector('#owner-email').value.trim(),ownerPassword:document.querySelector('#owner-password').value,phone:document.querySelector('#company-phone').value.trim()};const s=(await supabase.auth.getSession()).data.session;const r=await fetch('/.netlify/functions/admin-create-company',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.access_token},credentials:'include',body:JSON.stringify(payload)});const body=await r.json();if(!r.ok){msg.textContent=body.message||'Erro';return;}msg.textContent='Empresa criada.';form.reset();load();});
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+load();

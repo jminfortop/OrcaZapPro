@@ -1,0 +1,16 @@
+{
+  "name": "orcazap-pro",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "netlify dev",
+    "check": "node --check public/js/auth.js && node --check public/js/login.js && node --check public/js/admin.js && node --check public/js/public-quote.js",
+    "build": "node scripts/build-config.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^23.0.0"
+  }
+}

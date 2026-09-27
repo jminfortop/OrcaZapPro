@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1" />
+<meta name="theme-color" content="#2563eb" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="OrçaZAP Pro" />
+<title>OrçaZAP Pro - Gerador de Orçamentos</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%232563eb'/%3E%3Ctext x='50' y='55' font-family='Arial' font-size='46' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'%3EO%3C/text%3E%3C/svg%3E" />
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='28' fill='%232563eb'/%3E%3Ctext x='50%25' y='55%25' font-family='Arial' font-size='85' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'%3EO%3C/text%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="/css/app.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+
+<!-- SIDEBAR (desktop) -->
+<aside class="sidebar hidden md:flex" id="sidebar">
+  <div class="side-logo">
+    <div class="logo-ico">O</div>
+    <div>
+      <div class="logo-txt">OrçaZAP Pro</div>
+      <div class="logo-sub">Orçamentos profissionais</div>
+    </div>
+  </div>
+  <button class="side-btn active" data-page="dashboard"><i class="fa-solid fa-house"></i> Início</button>
+  <button class="side-btn" data-page="quotes"><i class="fa-solid fa-file-invoice-dollar"></i> Orçamentos</button>
+  <button class="side-btn" data-page="new"><i class="fa-solid fa-plus-circle"></i> Novo Orçamento</button>
+  <button class="side-btn" data-page="clients"><i class="fa-solid fa-users"></i> Clientes</button>
+  <button class="side-btn" data-page="catalog"><i class="fa-solid fa-boxes-stacked"></i> Catálogo</button>
+  <button class="side-btn" data-page="receipts"><i class="fa-solid fa-receipt"></i> Recibos</button>
+  <button class="side-btn" data-page="card"><i class="fa-solid fa-id-card"></i> Cartão Digital</button>
+  <button class="side-btn" data-page="more"><i class="fa-solid fa-ellipsis"></i> Mais</button>
+</aside>
+
+<!-- MAIN -->
+<main id="main">
+
+<!-- ============ DASHBOARD ============ -->
+<section class="page active" id="page-dashboard">
+  <div class="topbar">
+    <h1><i class="fa-solid fa-chart-line" style="color:var(--brand)"></i> OrçaZAP Pro</h1>
+    <button class="btn btn-ghost" onclick="App.goto('more')" title="Configurações"><i class="fa-solid fa-gear"></i></button>
+  </div>
+
+  <div class="grid-2 grid-3 grid-4" id="dash-stats"></div>
+
+  <div class="card" style="margin-top:1rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem">
+      <strong style="font-size:.95rem">Ações rápidas</strong>
+    </div>
+    <div class="grid-2">
+      <button class="btn btn-primary" onclick="App.goto('new')"><i class="fa-solid fa-plus"></i> Novo orçamento</button>
+      <button class="btn btn-ghost" onclick="App.goto('clients');App.openClientModal()"><i class="fa-solid fa-user-plus"></i> Novo cliente</button>
+      <button class="btn btn-ghost" onclick="App.goto('catalog')"><i class="fa-solid fa-box"></i> Catálogo</button>
+      <button class="btn btn-ghost" onclick="App.goto('receipts')"><i class="fa-solid fa-receipt"></i> Recibos</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem">
+      <strong style="font-size:.95rem">Follow-ups pendentes</strong>
+      <span class="chip chip-warn" id="dash-followup-count">0</span>
+    </div>
+    <div id="dash-followup-list"></div>
+  </div>
+
+  <div class="card" style="margin-top:1rem">
+    <strong style="font-size:.95rem;display:block;margin-bottom:.6rem">Orçamentos recentes</strong>
+    <div id="dash-recent"></div>
+  </div>
+</section>
+
+<!-- ============ ORÇAMENTOS ============ -->
+<section class="page" id="page-quotes">
+  <div class="topbar">
+    <h1><i class="fa-solid fa-file-invoice-dollar" style="color:var(--brand)"></i> Orçamentos</h1>
+    <button class="btn btn-ghost" onclick="App.openQuotesFilter()"><i class="fa-solid fa-filter"></i></button>
+  </div>
+  <div class="search-box" style="margin-bottom:.8rem">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input class="input" id="quotes-search" placeholder="Buscar por cliente, número..." oninput="App.renderQuotes()">
+  </div>
+  <div id="quotes-list"></div>
+</section>
+
+<!-- ============ NOVO ORÇAMENTO ============ -->
+<section class="page" id="page-new">
+  <div class="topbar">
+    <button class="btn btn-ghost" onclick="App.goto('dashboard')" style="padding:.5rem .7rem"><i class="fa-solid fa-arrow-left"></i></button>
+    <h1 id="new-title"><i class="fa-solid fa-plus-circle" style="color:var(--brand)"></i> Novo Orçamento</h1>
+    <button class="btn btn-ghost" onclick="App.openVoiceModal()" title="Criar por voz"><i class="fa-solid fa-microphone"></i></button>
+  </div>
+
+  <!-- Tipo de documento -->
+  <div class="card" style="margin-bottom:.8rem">
+    <label class="label">Tipo de Documento</label>
+    <div class="grid-2">
+      <button type="button" class="btn btn-primary" id="btn-doctype-quote" onclick="App.setDocType('quote')"><i class="fa-solid fa-file-invoice-dollar"></i> Orçamento</button>
+      <button type="button" class="btn btn-ghost" id="btn-doctype-receipt" onclick="App.setDocType('receipt')"><i class="fa-solid fa-receipt"></i> Recibo</button>
+    </div>
+  </div>
+
+  <!-- STEP 1: CLIENTE -->
+  <div class="card" style="margin-bottom:.8rem">
+    <strong style="font-size:.9rem;display:flex;align-items:center;gap:.4rem;margin-bottom:.6rem">
+      <span style="background:var(--brand);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem">1</span>
+      Cliente
+    </strong>
+    <div class="search-box" style="margin-bottom:.5rem">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input class="input" id="new-client-search" placeholder="Buscar cliente..." oninput="App.renderClientPicker()">
+    </div>
+    <div id="new-client-picker" style="max-height:180px;overflow-y:auto;margin-bottom:.5rem"></div>
+    <button class="btn btn-ghost btn-block" onclick="App.openClientModal()"><i class="fa-solid fa-user-plus"></i> Cadastrar novo cliente</button>
+    <div id="new-client-selected" class="hidden" style="margin-top:.6rem;padding:.7rem;background:#eff6ff;border-radius:.7rem;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:700" id="new-client-name"></div>
+        <div style="font-size:.8rem;color:var(--muted)" id="new-client-info"></div>
+      </div>
+      <button class="btn btn-ghost" onclick="App.clearNewClient()" style="padding:.4rem .7rem;min-height:auto"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  </div>
+
+  <!-- STEP 2: ITENS -->
+  <div class="card" style="margin-bottom:.8rem">
+    <strong style="font-size:.9rem;display:flex;align-items:center;gap:.4rem;margin-bottom:.6rem">
+      <span style="background:var(--brand);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem">2</span>
+      Serviços / Materiais
+    </strong>
+    <details style="margin-bottom:.6rem">
+      <summary class="btn btn-ghost btn-block" style="justify-content:space-between"><span><i class="fa-solid fa-boxes-stacked"></i> Adicionar do catálogo</span><i class="fa-solid fa-chevron-down"></i></summary>
+      <div style="margin-top:.5rem">
+        <input class="input" id="catalog-search" placeholder="Buscar no catálogo..." oninput="App.renderCatalogPicker()" style="margin-bottom:.5rem">
+        <div id="catalog-picker" style="max-height:240px;overflow-y:auto"></div>
+      </div>
+    </details>
+    <button class="btn btn-ghost btn-block" onclick="App.addManualItem()" style="margin-bottom:.6rem"><i class="fa-solid fa-plus"></i> Adicionar item manual</button>
+    <div id="new-items-list"></div>
+  </div>
+
+  <!-- STEP 3: VALORES -->
+  <div class="card" style="margin-bottom:.8rem">
+    <strong style="font-size:.9rem;display:flex;align-items:center;gap:.4rem;margin-bottom:.6rem">
+      <span style="background:var(--brand);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem">3</span>
+      Valores
+    </strong>
+    <div class="grid-2">
+      <div>
+        <label class="label">Desconto (R$)</label>
+        <input type="number" step="0.01" class="input" id="new-discount" value="0" oninput="App.recalc()">
+      </div>
+      <div>
+        <label class="label">Acréscimo (R$)</label>
+        <input type="number" step="0.01" class="input" id="new-additional" value="0" oninput="App.recalc()">
+      </div>
+      <div>
+        <label class="label">Frete / Deslocamento (R$)</label>
+        <input type="number" step="0.01" class="input" id="new-freight" value="0" oninput="App.recalc()">
+      </div>
+      <div>
+        <label class="label">Total</label>
+        <div class="input" style="background:#f1f5f9;font-weight:800;font-size:1.1rem;color:var(--brand)" id="new-total">R$ 0,00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: CONDIÇÕES -->
+  <div class="card" style="margin-bottom:.8rem">
+    <strong style="font-size:.9rem;display:flex;align-items:center;gap:.4rem;margin-bottom:.6rem">
+      <span style="background:var(--brand);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem">4</span>
+      Condições
+    </strong>
+    <div class="grid-2">
+      <div>
+        <label class="label">Forma de pagamento</label>
+        <input class="input" id="new-payment" placeholder="Ex: 50% na aprovação">
+      </div>
+      <div>
+        <label class="label">Validade (dias)</label>
+        <input type="number" class="input" id="new-validity" value="7">
+      </div>
+      <div>
+        <label class="label">Prazo de execução</label>
+        <input class="input" id="new-deadline" placeholder="Ex: 5 dias úteis">
+      </div>
+      <div>
+        <label class="label">Garantia</label>
+        <input class="input" id="new-warranty" placeholder="Ex: 90 dias">
+      </div>
+    </div>
+    <label class="label" style="margin-top:.6rem">Observações</label>
+    <textarea class="textarea" id="new-notes" rows="3" placeholder="Observações gerais..."></textarea>
+    <div style="margin-top:.6rem;display:flex;align-items:center;gap:.5rem">
+      <input type="checkbox" id="new-show-pix" checked>
+      <label for="new-show-pix" style="font-size:.88rem;font-weight:500">Mostrar PIX no orçamento (com QR Code)</label>
+    </div>
+  </div>
+
+  <!-- STEP 5: AÇÕES -->
+  <div class="card" style="margin-bottom:.8rem">
+    <strong style="font-size:.9rem;display:flex;align-items:center;gap:.4rem;margin-bottom:.6rem">
+      <span style="background:var(--brand);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem">5</span>
+      Revisar e enviar
+    </strong>
+    <div class="grid-2">
+      <button class="btn btn-ghost" onclick="App.saveQuote('draft')"><i class="fa-solid fa-floppy-disk"></i> Rascunho</button>
+      <button class="btn btn-primary" onclick="App.saveQuote('sent')"><i class="fa-solid fa-paper-plane"></i> Salvar e enviar</button>
+      <button class="btn btn-ghost" onclick="App.previewPDF()"><i class="fa-solid fa-eye"></i> Ver PDF</button>
+      <button class="btn btn-ghost" onclick="App.downloadPDF()"><i class="fa-solid fa-file-pdf"></i> Baixar PDF</button>
+      <button class="btn btn-wa" onclick="App.sendWhatsApp()"><i class="fa-brands fa-whatsapp"></i> WhatsApp</button>
+      <button class="btn btn-ghost" onclick="App.shareQuote()"><i class="fa-solid fa-share-nodes"></i> Compartilhar</button>
+    </div>
+  </div>
+
+  <!-- PREVIEW WHATSAPP -->
+  <div class="card" style="margin-bottom:1rem">
+    <strong style="font-size:.9rem;display:flex;align-items:center;gap:.4rem;margin-bottom:.2rem">
+      <i class="fa-brands fa-whatsapp" style="color:#25d366"></i>
+      Preview da mensagem (WhatsApp)
+    </strong>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:.4rem">Atualizado automaticamente conforme você preenche</div>
+    <div class="wa-preview">
+      <div class="wa-bubble" id="wa-preview-bubble">Preencha os dados do orçamento para ver o preview aqui...</div>
+      <div class="wa-time" id="wa-preview-time"></div>
+    </div>
+    <div class="grid-2" style="margin-top:.6rem">
+      <button class="btn btn-ghost" onclick="App.copyWAPreview()"><i class="fa-solid fa-copy"></i> Copiar texto</button>
+      <button class="btn btn-wa" onclick="App.sendWhatsApp()"><i class="fa-brands fa-whatsapp"></i> Enviar</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CLIENTES ============ -->
+<section class="page" id="page-clients">
+  <div class="topbar">
+    <h1><i class="fa-solid fa-users" style="color:var(--brand)"></i> Clientes</h1>
+    <button class="btn btn-primary" onclick="App.openClientModal()" style="padding:.5rem .8rem;min-height:auto"><i class="fa-solid fa-plus"></i></button>
+  </div>
+  <div class="search-box" style="margin-bottom:.8rem">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input class="input" id="clients-search" placeholder="Buscar cliente..." oninput="App.renderClients()">
+  </div>
+  <div id="clients-list"></div>
+</section>
+
+<!-- ============ CATÁLOGO ============ -->
+<section class="page" id="page-catalog">
+  <div class="topbar">
+    <h1><i class="fa-solid fa-boxes-stacked" style="color:var(--brand)"></i> Catálogo</h1>
+    <button class="btn btn-primary" onclick="App.openCatalogModal()" style="padding:.5rem .8rem;min-height:auto"><i class="fa-solid fa-plus"></i></button>
+  </div>
+  <div class="search-box" style="margin-bottom:.8rem">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input class="input" id="catalog-page-search" placeholder="Buscar item..." oninput="App.renderCatalog()">
+  </div>
+  <div id="catalog-list"></div>
+</section>
+
+<!-- ============ RECIBOS ============ -->
+<section class="page" id="page-receipts">
+  <div class="topbar">
+    <h1><i class="fa-solid fa-receipt" style="color:var(--brand)"></i> Recibos</h1>
+    <button class="btn btn-primary" onclick="App.openReceiptModal()" style="padding:.5rem .8rem;min-height:auto"><i class="fa-solid fa-plus"></i></button>
+  </div>
+  <div id="receipts-list"></div>
+</section>
+
+<!-- ============ CARTÃO DIGITAL ============ -->
+<section class="page" id="page-card">
+  <div class="topbar">
+    <h1><i class="fa-solid fa-id-card" style="color:var(--brand)"></i> Cartão Digital</h1>
+  </div>
+  <div class="card" id="card-preview"></div>
+  <div class="card" style="margin-top:.8rem">
+    <strong style="font-size:.95rem;display:block;margin-bottom:.6rem">Dados do cartão</strong>
+    <label class="label">Profissão / Especialidade</label>
+    <input class="input" id="card-profession" oninput="App.saveCard()">
+    <label class="label" style="margin-top:.5rem">Descrição curta</label>
+    <textarea class="textarea" id="card-desc" rows="2" oninput="App.saveCard()"></textarea>
+    <label class="label" style="margin-top:.5rem">Cidade</label>
+    <input class="input" id="card-city" oninput="App.saveCard()">
+    <label class="label" style="margin-top:.5rem">Instagram</label>
+    <input class="input" id="card-insta" placeholder="@usuario" oninput="App.saveCard()">
+    <label class="label" style="margin-top:.5rem">Facebook</label>
+    <input class="input" id="card-fb" oninput="App.saveCard()">
+    <div class="grid-2" style="margin-top:.8rem">
+      <button class="btn btn-ghost" onclick="App.shareCard()"><i class="fa-solid fa-share-nodes"></i> Compartilhar</button>
+      <button class="btn btn-wa" onclick="App.shareCardWA()"><i class="fa-brands fa-whatsapp"></i> WhatsApp</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MAIS ============ -->
+<section class="page" id="page-more">
+  <div class="topbar">
+    <h1><i class="fa-solid fa-ellipsis" style="color:var(--brand)"></i> Mais</h1>
+  </div>
+
+  <details class="card" style="margin-bottom:.6rem" open>
+    <summary style="display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem">
+      <span><i class="fa-solid fa-building"></i> Minha Empresa</span>
+      <i class="fa-solid fa-chevron-down"></i>
+    </summary>
+    <div style="margin-top:.8rem">
+      <label class="label">Logo</label>
+      <div style="display:flex;gap:.5rem;margin-bottom:.5rem">
+        <label class="btn btn-ghost" style="flex:1;margin:0"><i class="fa-solid fa-upload"></i> Upload<input type="file" accept="image/*" id="company-logo" style="display:none" onchange="App.uploadLogo(event)"></label>
+        <button class="btn btn-ghost" onclick="App.openLogoGenerator()" style="flex:1"><i class="fa-solid fa-wand-magic-sparkles"></i> Gerar com IA</button>
+        <button class="btn btn-ghost" onclick="App.clearLogo()"><i class="fa-solid fa-trash"></i></button>
+      </div>
+      <div id="company-logo-preview" style="margin-bottom:.6rem"></div>
+      <div class="grid-2">
+        <div><label class="label">Nome</label><input class="input" id="company-name" oninput="App.saveCompany()"></div>
+        <div><label class="label">CPF/CNPJ</label><input class="input" id="company-doc" oninput="App.saveCompany()"></div>
+        <div><label class="label">Telefone</label><input class="input" id="company-phone" oninput="App.saveCompany()"></div>
+        <div><label class="label">WhatsApp</label><input class="input" id="company-whatsapp" oninput="App.saveCompany()"></div>
+        <div style="grid-column:1/-1"><label class="label">E-mail</label><input class="input" id="company-email" oninput="App.saveCompany()"></div>
+        <div style="grid-column:1/-1"><label class="label">Endereço</label><input class="input" id="company-address" oninput="App.saveCompany()"></div>
+      </div>
+    </div>
+  </details>
+
+  <details class="card" style="margin-bottom:.6rem">
+    <summary style="display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem">
+      <span><i class="fa-solid fa-palette"></i> Identidade visual</span>
+      <i class="fa-solid fa-chevron-down"></i>
+    </summary>
+    <div style="margin-top:.8rem" class="grid-2">
+      <div><label class="label">Cor principal</label><input type="color" class="input" id="company-color1" value="#2563eb" oninput="App.saveCompany()"></div>
+      <div><label class="label">Cor secundária</label><input type="color" class="input" id="company-color2" value="#16a34a" oninput="App.saveCompany()"></div>
+    </div>
+  </details>
+
+  <details class="card" style="margin-bottom:.6rem">
+    <summary style="display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem">
+      <span><i class="fa-solid fa-sliders"></i> Padrões</span>
+      <i class="fa-solid fa-chevron-down"></i>
+    </summary>
+    <div style="margin-top:.8rem">
+      <label class="label">Prefixo do orçamento</label>
+      <input class="input" id="settings-prefix" value="ORC" oninput="App.saveSettings()">
+      <label class="label" style="margin-top:.5rem">Validade padrão (dias)</label>
+      <input type="number" class="input" id="settings-validity" value="7" oninput="App.saveSettings()">
+      <label class="label" style="margin-top:.5rem">Forma de pagamento padrão</label>
+      <input class="input" id="settings-payment" oninput="App.saveSettings()">
+      <label class="label" style="margin-top:.5rem">Prazo de execução padrão</label>
+      <input class="input" id="settings-deadline" oninput="App.saveSettings()">
+      <label class="label" style="margin-top:.5rem">Garantia padrão</label>
+      <input class="input" id="settings-warranty" oninput="App.saveSettings()">
+      <label class="label" style="margin-top:.5rem">Termos padrão</label>
+      <textarea class="textarea" id="settings-terms" rows="3" oninput="App.saveSettings()"></textarea>
+    </div>
+  </details>
+
+  <details class="card" style="margin-bottom:.6rem">
+    <summary style="display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem">
+      <span><i class="fa-solid fa-qrcode"></i> PIX</span>
+      <i class="fa-solid fa-chevron-down"></i>
+    </summary>
+    <div style="margin-top:.8rem">
+      <label class="label">Chave PIX</label>
+      <input class="input" id="pix-key" oninput="App.saveCompany()">
+      <label class="label" style="margin-top:.5rem">Nome do recebedor</label>
+      <input class="input" id="pix-name" oninput="App.saveCompany()">
+      <label class="label" style="margin-top:.5rem">Cidade</label>
+      <input class="input" id="pix-city" oninput="App.saveCompany()">
+    </div>
+  </details>
+
+  <details class="card" style="margin-bottom:.6rem">
+    <summary style="display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.95rem">
+      <span><i class="fa-solid fa-bell"></i> Follow-up</span>
+      <i class="fa-solid fa-chevron-down"></i>
+    </summary>
+    <div style="margin-top:.8rem">
+      <label class="label">Lembrar após (dias)</label>
+      <input type="number" class="input" id="settings-followup" value="3" oninput="App.saveSettings()">
+    </div>
+  </details>
+
+  <div class="card" style="margin-bottom:.6rem">
+    <strong style="font-size:.95rem;display:block;margin-bottom:.6rem"><i class="fa-solid fa-database"></i> Backup</strong>
+    <div class="grid-2">
+      <button class="btn btn-ghost" onclick="App.exportBackup()"><i class="fa-solid fa-download"></i> Exportar</button>
+      <label class="btn btn-ghost" style="margin:0;cursor:pointer"><i class="fa-solid fa-upload"></i> Importar<input type="file" accept="application/json" style="display:none" onchange="App.importBackup(event)"></label>
+    </div>
+  </div>
+
+  <button class="btn btn-block btn-ghost" style="margin-bottom:.6rem" onclick="App.openAbout()">
+    <i class="fa-solid fa-circle-info"></i> Sobre o OrçaZAP Pro
+  </button>
+</section>
+
+</main>
+
+<!-- NAV BOTTOM (mobile) -->
+<nav class="nav-bottom">
+  <button class="nav-btn active" data-page="dashboard"><i class="fa-solid fa-house" style="font-size:1.1rem"></i><span>Início</span></button>
+  <button class="nav-btn" data-page="quotes"><i class="fa-solid fa-file-invoice-dollar" style="font-size:1.1rem"></i><span>Orçamentos</span></button>
+  <button class="nav-btn" data-page="new"><div class="nav-fab"><i class="fa-solid fa-plus"></i></div><span style="margin-top:-10px">Novo</span></button>
+  <button class="nav-btn" data-page="clients"><i class="fa-solid fa-users" style="font-size:1.1rem"></i><span>Clientes</span></button>
+  <button class="nav-btn" data-page="more"><i class="fa-solid fa-ellipsis" style="font-size:1.1rem"></i><span>Mais</span></button>
+</nav>
+
+<!-- FAB -->
+<button class="fab" onclick="App.goto('new')" title="Novo orçamento"><i class="fa-solid fa-plus"></i></button>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ============ MODAIS ============ -->
+
+<!-- Modal Cliente -->
+<div class="modal-backdrop" id="modal-client">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <strong style="font-size:1.05rem" id="client-modal-title">Novo cliente</strong>
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-client')" style="padding:.4rem .7rem;min-height:auto"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="client-id">
+    <label class="label">Nome *</label>
+    <input class="input" id="client-name" required>
+    <div class="grid-2" style="margin-top:.5rem">
+      <div><label class="label">WhatsApp</label><input class="input" id="client-whatsapp" inputmode="tel"></div>
+      <div><label class="label">Telefone</label><input class="input" id="client-phone" inputmode="tel"></div>
+    </div>
+    <label class="label" style="margin-top:.5rem">E-mail</label>
+    <input class="input" id="client-email" type="email">
+    <label class="label" style="margin-top:.5rem">CPF/CNPJ</label>
+    <input class="input" id="client-doc">
+    <label class="label" style="margin-top:.5rem">Endereço</label>
+    <input class="input" id="client-address">
+    <div class="grid-2" style="margin-top:.5rem">
+      <div><label class="label">Bairro</label><input class="input" id="client-district"></div>
+      <div><label class="label">CEP</label><input class="input" id="client-zip"></div>
+    </div>
+    <div class="grid-2" style="margin-top:.5rem">
+      <div><label class="label">Cidade</label><input class="input" id="client-city"></div>
+      <div><label class="label">Estado</label><input class="input" id="client-state" maxlength="2"></div>
+    </div>
+    <label class="label" style="margin-top:.5rem">Observações</label>
+    <textarea class="textarea" id="client-notes" rows="2"></textarea>
+    <div class="grid-2" style="margin-top:1rem">
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-client')">Cancelar</button>
+      <button class="btn btn-primary" onclick="App.saveClient()"><i class="fa-solid fa-check"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Catálogo -->
+<div class="modal-backdrop" id="modal-catalog">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <strong style="font-size:1.05rem" id="catalog-modal-title">Novo item</strong>
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-catalog')" style="padding:.4rem .7rem;min-height:auto"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="catalog-id">
+    <label class="label">Nome *</label>
+    <input class="input" id="catalog-name" required>
+    <label class="label" style="margin-top:.5rem">Descrição</label>
+    <textarea class="textarea" id="catalog-desc" rows="2"></textarea>
+    <div class="grid-2" style="margin-top:.5rem">
+      <div>
+        <label class="label">Categoria</label>
+        <input class="input" id="catalog-category" placeholder="Ex: Pintura" list="cat-categories">
+        <datalist id="cat-categories"></datalist>
+      </div>
+      <div>
+        <label class="label">Tipo</label>
+        <select class="select" id="catalog-type">
+          <option value="servico">Serviço</option>
+          <option value="material">Material</option>
+          <option value="produto">Produto</option>
+        </select>
+      </div>
+      <div>
+        <label class="label">Unidade</label>
+        <input class="input" id="catalog-unit" placeholder="un, m², h..." value="un">
+      </div>
+      <div>
+        <label class="label">Preço (R$)</label>
+        <input type="number" step="0.01" class="input" id="catalog-price" value="0">
+      </div>
+      <div>
+        <label class="label">Custo (opcional)</label>
+        <input type="number" step="0.01" class="input" id="catalog-cost" value="0">
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <label style="display:flex;align-items:center;gap:.4rem;font-size:.88rem"><input type="checkbox" id="catalog-active" checked> Ativo</label>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:1rem">
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-catalog')">Cancelar</button>
+      <button class="btn btn-primary" onclick="App.saveCatalogItem()"><i class="fa-solid fa-check"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detalhes Orçamento -->
+<div class="modal-backdrop" id="modal-quote-detail">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <strong style="font-size:1.05rem" id="qd-title">Orçamento</strong>
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-quote-detail')" style="padding:.4rem .7rem;min-height:auto"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="qd-body"></div>
+    <div class="divider"></div>
+    <div id="qd-actions" class="grid-2"></div>
+  </div>
+</div>
+
+<!-- Modal Voz -->
+<div class="modal-backdrop" id="modal-voice">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <strong style="font-size:1.05rem"><i class="fa-solid fa-microphone"></i> Criar por voz</strong>
+      <button class="btn btn-ghost" onclick="App.stopVoice();App.closeModal('modal-voice')" style="padding:.4rem .7rem;min-height:auto"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div style="text-align:center;padding:1rem">
+      <button class="voice-btn" id="voice-btn" onclick="App.toggleVoice()" style="margin:0 auto"><i class="fa-solid fa-microphone"></i></button>
+      <div style="margin-top:.8rem;font-size:.88rem;color:var(--muted)" id="voice-status">Toque para começar a falar</div>
+    </div>
+    <label class="label">Texto reconhecido</label>
+    <textarea class="textarea" id="voice-text" rows="4" placeholder="O texto reconhecido aparecerá aqui..."></textarea>
+    <div style="font-size:.8rem;color:var(--muted);margin-top:.5rem">
+      Dica: fale algo como "Orçamento para João, pintura de sala por 1200 reais, validade 7 dias".
+    </div>
+    <div class="grid-2" style="margin-top:1rem">
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-voice')">Fechar</button>
+      <button class="btn btn-primary" onclick="App.applyVoice()"><i class="fa-solid fa-check"></i> Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Assinatura -->
+<div class="modal-backdrop" id="modal-signature">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <strong style="font-size:1.05rem">Assinatura</strong>
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-signature')" style="padding:.4rem .7rem;min-height:auto"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <canvas class="sig-canvas" id="sig-canvas"></canvas>
+    <div class="grid-2" style="margin-top:.8rem">
+      <button class="btn btn-ghost" onclick="App.clearSignature()"><i class="fa-solid fa-eraser"></i> Limpar</button>
+      <button class="btn btn-primary" onclick="App.confirmSignature()"><i class="fa-solid fa-check"></i> Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Recibo -->
+<div class="modal-backdrop" id="modal-receipt">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <strong style="font-size:1.05rem" id="receipt-modal-title">Novo recibo</strong>
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-receipt')" style="padding:.4rem .7rem;min-height:auto"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="receipt-id">
+    <input type="hidden" id="receipt-quote-id">
+    <label class="label">Referente a (serviço/produto)</label>
+    <input class="input" id="receipt-ref">
+    <label class="label" style="margin-top:.5rem">Cliente</label>
+    <select class="select" id="receipt-client"></select>
+    <label class="label" style="margin-top:.5rem">Valor (R$)</label>
+    <input type="number" step="0.01" class="input" id="receipt-value" value="0">
+    <label class="label" style="margin-top:.5rem">Valor por extenso (opcional)</label>
+    <input class="input" id="receipt-extenso">
+    <label class="label" style="margin-top:.5rem">Observações</label>
+    <textarea class="textarea" id="receipt-notes" rows="2"></textarea>
+    <div class="grid-2" style="margin-top:1rem">
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-receipt')">Cancelar</button>
+      <button class="btn btn-primary" onclick="App.saveReceipt()"><i class="fa-solid fa-check"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Filtros Orçamentos -->
+<div class="modal-backdrop" id="modal-quotes-filter">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <strong style="font-size:1.05rem">Filtros</strong>
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-quotes-filter')" style="padding:.4rem .7rem;min-height:auto"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <label class="label">Status</label>
+    <select class="select" id="filter-status">
+      <option value="">Todos</option>
+      <option value="draft">Rascunho</option>
+      <option value="sent">Enviado</option>
+      <option value="viewed">Visualizado</option>
+      <option value="approved">Aprovado</option>
+      <option value="rejected">Rejeitado</option>
+      <option value="expired">Expirado</option>
+      <option value="cancelled">Cancelado</option>
+    </select>
+    <label class="label" style="margin-top:.5rem">Cliente</label>
+    <select class="select" id="filter-client"><option value="">Todos</option></select>
+    <label class="label" style="margin-top:.5rem">Período</label>
+    <select class="select" id="filter-period">
+      <option value="">Todos</option>
+      <option value="7">Últimos 7 dias</option>
+      <option value="30">Últimos 30 dias</option>
+      <option value="90">Últimos 90 dias</option>
+      <option value="365">Último ano</option>
+    </select>
+    <div class="grid-2" style="margin-top:1rem">
+      <button class="btn btn-ghost" onclick="App.clearQuotesFilter()">Limpar</button>
+      <button class="btn btn-primary" onclick="App.applyQuotesFilter()"><i class="fa-solid fa-check"></i> Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Visualização PDF -->
+<div class="modal-backdrop" id="modal-pdf-view">
+  <div class="modal" style="max-width:800px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <strong style="font-size:1.05rem">Visualização do PDF</strong>
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-pdf-view')" style="padding:.4rem .7rem;min-height:auto"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <iframe id="pdf-iframe" style="width:100%;height:70vh;border:1px solid var(--border);border-radius:.6rem;background:#f1f5f9"></iframe>
+    <div class="grid-2" style="margin-top:.8rem">
+      <button class="btn btn-ghost" onclick="App.downloadCurrentPDF()"><i class="fa-solid fa-download"></i> Baixar</button>
+      <button class="btn btn-primary" onclick="App.shareCurrentPDF()"><i class="fa-solid fa-share-nodes"></i> Compartilhar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Gerador de Logo IA -->
+<div class="modal-backdrop" id="modal-logo-gen">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <strong style="font-size:1.05rem"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--brand)"></i> Gerar Logo com IA</strong>
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-logo-gen')" style="padding:.4rem .7rem;min-height:auto"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:.7rem;padding:.7rem;font-size:.82rem;color:#1e40af;margin-bottom:.8rem">
+  <i class="fa-solid fa-lightbulb"></i> Para melhor resultado, use títulos e subtítulos com no <strong>máximo 10 caracteres</strong> cada.
+    </div>
+
+    <label class="label">Título (mínimo 10 caracteres) *</label>
+    <input class="input" id="logo-title" placeholder="Ex: JM Infor Tech" maxlength="40" oninput="App.previewLogoGen()">
+    <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem;text-align:right"><span id="logo-title-count">0</span>/40</div>
+
+    <label class="label" style="margin-top:.5rem">Subtítulo (mínimo 10 caracteres) *</label>
+    <input class="input" id="logo-subtitle" placeholder="Ex: Soluções em informática" maxlength="50" oninput="App.previewLogoGen()">
+    <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem;text-align:right"><span id="logo-subtitle-count">0</span>/50</div>
+
+    <label class="label" style="margin-top:.5rem">Escolha um ícone</label>
+    <div class="icon-grid" id="logo-icon-grid"></div>
+
+    <div class="grid-2" style="margin-top:.8rem">
+      <div>
+        <label class="label">Cor principal</label>
+        <input type="color" class="input" id="logo-color1" value="#2563eb" oninput="App.previewLogoGen()">
+      </div>
+      <div>
+        <label class="label">Cor secundária</label>
+        <input type="color" class="input" id="logo-color2" value="#1e40af" oninput="App.previewLogoGen()">
+      </div>
+    </div>
+
+    <label class="label" style="margin-top:.8rem">Estilo</label>
+    <div class="grid-2">
+      <button type="button" class="btn btn-ghost logo-style-opt selected" data-style="modern" onclick="App.setLogoStyle('modern')">Moderno</button>
+      <button type="button" class="btn btn-ghost logo-style-opt" data-style="classic" onclick="App.setLogoStyle('classic')">Clássico</button>
+      <button type="button" class="btn btn-ghost logo-style-opt" data-style="bold" onclick="App.setLogoStyle('bold')">Ousado</button>
+      <button type="button" class="btn btn-ghost logo-style-opt" data-style="minimal" onclick="App.setLogoStyle('minimal')">Minimalista</button>
+    </div>
+
+    <label class="label" style="margin-top:.8rem">Preview</label>
+    <canvas id="logo-preview-canvas" class="logo-canvas-preview" width="512" height="512"></canvas>
+
+    <div class="grid-2" style="margin-top:1rem">
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-logo-gen')">Cancelar</button>
+      <button class="btn btn-primary" onclick="App.applyGeneratedLogo()"><i class="fa-solid fa-check"></i> Usar esta logo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Sobre -->
+<div class="modal-backdrop" id="modal-about">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <strong style="font-size:1.05rem">Sobre</strong>
+      <button class="btn btn-ghost" onclick="App.closeModal('modal-about')" style="padding:.4rem .7rem;min-height:auto"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="about-card">
+      <div style="width:70px;height:70px;border-radius:1rem;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;margin:0 auto .6rem">O</div>
+      <h2>OrçaZAP Pro</h2>
+      <p>Gerador Profissional de Orçamentos</p>
+      <p style="font-size:.8rem;opacity:.75">Versão 2.0</p>
+    </div>
+
+    <div class="card" style="margin-bottom:.8rem">
+      <strong style="font-size:.95rem;display:block;margin-bottom:.5rem"><i class="fa-solid fa-star" style="color:var(--warn)"></i> O que é o OrçaZAP Pro?</strong>
+      <div style="font-size:.88rem;line-height:1.6;color:#334155">
+        Sistema completo para criação, envio e acompanhamento de orçamentos profissionais, desenvolvido especialmente para prestadores de serviço. Crie orçamentos em minutos pelo celular, gere PDFs profissionais, envie pelo WhatsApp e acompanhe o status de cada proposta.
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:.8rem">
+      <strong style="font-size:.95rem;display:block;margin-bottom:.5rem"><i class="fa-solid fa-rocket" style="color:var(--brand)"></i> Principais recursos</strong>
+      <ul style="font-size:.88rem;line-height:1.8;color:#334155;padding-left:1.2rem;margin:.3rem 0">
+        <li>Orçamentos e recibos profissionais</li>
+        <li>Geração de PDF com QR Code PIX</li>
+        <li>Envio direto pelo WhatsApp</li>
+        <li>Catálogo de serviços e produtos</li>
+        <li>Cadastro completo de clientes</li>
+        <li>Criação de orçamento por voz</li>
+        <li>Assinatura digital de aceite</li>
+        <li>Cartão de visita digital</li>
+        <li>Dashboard com indicadores</li>
+        <li>Funciona offline (PWA)</li>
+      </ul>
+    </div>
+
+    <div class="card" style="margin-bottom:.8rem">
+      <strong style="font-size:.95rem;display:block;margin-bottom:.6rem"><i class="fa-solid fa-user-tie" style="color:var(--brand)"></i> Desenvolvido por</strong>
+      <div class="creator-card">
+        <div class="creator-ava">JC</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:1rem">Jairo Caminha Tavares</div>
+          <div style="font-size:.85rem;color:var(--brand);font-weight:600">JM Infor</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-top:.2rem">
+            <i class="fa-brands fa-whatsapp" style="color:#25d366"></i> (85) 99108-8705
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-wa btn-block" style="margin-top:.8rem" onclick="App.contactCreator()">
+        <i class="fa-brands fa-whatsapp"></i> Falar com o desenvolvedor
+      </button>
+    </div>
+
+    <div style="text-align:center;font-size:.78rem;color:var(--muted);padding:.5rem">
+      © 2026 OrçaZAP Pro · Todos os direitos reservados<br>
+      Feito com <i class="fa-solid fa-heart" style="color:var(--danger)"></i> no Brasil
+    </div>
+  </div>
+</div>
+
+
+<script type="module" src="/js/app-entry.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+create or replace function public.my_company_id() returns uuid language sql stable security definer set search_path=public as $$ select company_id from public.profiles where id=auth.uid() and active=true limit 1 $$;
+alter table companies enable row level security; alter table profiles enable row level security; alter table company_settings enable row level security; alter table clients enable row level security; alter table catalog_items enable row level security; alter table quotes enable row level security; alter table quote_items enable row level security; alter table receipts enable row level security; alter table digital_cards enable row level security; alter table notifications enable row level security;
+create policy company_self on companies for select to authenticated using(id=public.my_company_id());
+create policy profile_self on profiles for select to authenticated using(id=auth.uid());
+create policy company_settings_own on company_settings for all to authenticated using(company_id=public.my_company_id()) with check(company_id=public.my_company_id());
+create policy clients_own on clients for all to authenticated using(company_id=public.my_company_id()) with check(company_id=public.my_company_id());
+create policy catalog_own on catalog_items for all to authenticated using(company_id=public.my_company_id()) with check(company_id=public.my_company_id());
+create policy quotes_own on quotes for all to authenticated using(company_id=public.my_company_id()) with check(company_id=public.my_company_id());
+create policy quote_items_own on quote_items for all to authenticated using(exists(select 1 from quotes q where q.id=quote_id and q.company_id=public.my_company_id())) with check(exists(select 1 from quotes q where q.id=quote_id and q.company_id=public.my_company_id()));
+create policy receipts_own on receipts for all to authenticated using(company_id=public.my_company_id()) with check(company_id=public.my_company_id());
+create policy cards_own on digital_cards for all to authenticated using(company_id=public.my_company_id()) with check(company_id=public.my_company_id());
+create policy notifications_own on notifications for all to authenticated using(company_id=public.my_company_id()) with check(company_id=public.my_company_id());

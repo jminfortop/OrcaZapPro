@@ -1,0 +1,4 @@
+import { supabase, isSupabaseConfigured } from './supabase-client.js';
+const form=document.querySelector('#login-form'), message=document.querySelector('#message');
+if(!isSupabaseConfigured()) message.textContent='Configure o Supabase antes de usar o login.';
+form.addEventListener('submit', async (e)=>{e.preventDefault(); if(!supabase)return; message.textContent='Entrando...'; const {error}=await supabase.auth.signInWithPassword({email:document.querySelector('#email').value.trim(),password:document.querySelector('#password').value}); if(error){message.textContent=error.message;return;} const {data}=await supabase.from('profiles').select('role').eq('id',(await supabase.auth.getUser()).data.user.id).single(); location.href=data?.role==='admin'||data?.role==='owner'?'/admin.html':'/app.html';});
